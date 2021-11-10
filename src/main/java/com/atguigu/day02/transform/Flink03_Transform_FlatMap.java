@@ -17,7 +17,7 @@ public class Flink03_Transform_FlatMap {
 
         //2.从端口获取数据
         DataStreamSource<String> streamSource = env.socketTextStream("hadoop102", 9999);
-
+        System.out.println("你好");
         //TODO 3.使用FLatmap算子，将数据按照空格切分，获取到每一个单词
         SingleOutputStreamOperator<String> flatMap = streamSource.flatMap(new FlatMapFunction<String, String>() {
             @Override
