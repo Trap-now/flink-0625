@@ -4,7 +4,6 @@ import com.atguigu.bean.WaterSensor;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -15,16 +14,17 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.OutputTag;
 
 import java.time.Duration;
 
-public class Flink02_Window_EventTime_Tumbling_WaterMark_ForBounded {
+public class Flink08_Window_EventTime_Tumbling_WaterMark_ForBounded_AllowedLateness_Output {
     public static void main(String[] args) throws Exception {
         //1.获取流的执行环境
-//        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+//        StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(new Configuration());
 
-        env.setParallelism(2);
+        env.setParallelism(1);
 
         //2.从端口读取数据
         DataStreamSource<String> streamSource = env.socketTextStream("localhost", 9999);
@@ -52,21 +52,29 @@ public class Flink02_Window_EventTime_Tumbling_WaterMark_ForBounded {
                 );
 
         KeyedStream<WaterSensor, String> keyedStream = waterSensorSingleOutputStreamOperator.keyBy(r -> r.getId());
+        OutputTag<WaterSensor> outputTag = new OutputTag<WaterSensor>("output") {};
 
         //TODO 开启一个基于事件时间的滚动窗口
-        WindowedStream<WaterSensor, String, TimeWindow> window = keyedStream.window(TumblingEventTimeWindows.of(Time.seconds(5)));
+        WindowedStream<WaterSensor, String, TimeWindow> window = keyedStream.window(TumblingEventTimeWindows.of(Time.seconds(5)))
+                //允许迟到的数据
+                .allowedLateness(Time.seconds(3))
+                //设置侧输出流，将关窗之后来的数据输出到侧输出流中
+                .sideOutputLateData(outputTag)
+                ;
 
-        window.process(new ProcessWindowFunction<WaterSensor, String, String, TimeWindow>() {
+        SingleOutputStreamOperator<String> process = window.process(new ProcessWindowFunction<WaterSensor, String, String, TimeWindow>() {
             @Override
             public void process(String key, Context context, Iterable<WaterSensor> elements, Collector<String> out) throws Exception {
                 String msg = "当前key: " + key
-                        + "窗口: [" + context.window().getStart() / 1000 + "," + context.window().getEnd()/1000 + ") 一共有 "
+                        + "窗口: [" + context.window().getStart() / 1000 + "," + context.window().getEnd() / 1000 + ") 一共有 "
                         + elements.spliterator().estimateSize() + "条数据 ";
                 out.collect(msg);
             }
-        })
-                .print();
+        });
 
+        process.print("主流");
+
+        process.getSideOutput(outputTag).print("侧输出");
 
 
         env.execute();
