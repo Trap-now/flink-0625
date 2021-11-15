@@ -11,7 +11,6 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
-import java.awt.peer.WindowPeer;
 
 public class Flink02_WordCount_Bounded {
     public static void main(String[] args) throws Exception {

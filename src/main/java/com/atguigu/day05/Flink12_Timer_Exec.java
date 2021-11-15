@@ -8,7 +8,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.OutputTag;
-import sun.plugin.javascript.navig.ImageArray;
+
 
 public class Flink12_Timer_Exec {
     public static void main(String[] args) throws Exception {
