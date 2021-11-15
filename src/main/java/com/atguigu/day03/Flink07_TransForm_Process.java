@@ -1,7 +1,10 @@
 package com.atguigu.day03;
 
 import com.atguigu.bean.WaterSensor;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -33,13 +36,21 @@ public class Flink07_TransForm_Process {
         //利用Process实现累加器功能
         SingleOutputStreamOperator<Integer> result = keyedStream.process(new KeyedProcessFunction<Tuple, WaterSensor, Integer>() {
 
-            private Integer count = 0;
+            private ValueState<Integer> count;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                count = getRuntimeContext().getState(new ValueStateDescriptor<Integer>("count-State", Integer.class, 0));
+            }
 
             @Override
             public void processElement(WaterSensor value, Context ctx, Collector<Integer> out) throws Exception {
                 System.out.println("process....");
-                count++;
-                out.collect(count);
+                Integer lastCount = count.value();
+                lastCount++;
+                count.update(lastCount);
+
+                out.collect(lastCount);
             }
         });
 
