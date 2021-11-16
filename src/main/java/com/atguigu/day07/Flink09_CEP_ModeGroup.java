@@ -11,13 +11,12 @@ import org.apache.flink.cep.pattern.Pattern;
 import org.apache.flink.cep.pattern.conditions.IterativeCondition;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.time.Time;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-public class Flink06_CEP_Loop_Add {
+public class Flink09_CEP_ModeGroup {
     public static void main(String[] args) throws Exception {
         //1.获取流的执行环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -45,22 +44,26 @@ public class Flink06_CEP_Loop_Add {
                 );
 
         //TODO 1.定义模式
-        Pattern<WaterSensor, WaterSensor> pattern = Pattern
-                .<WaterSensor>begin("start")
-                .where(new IterativeCondition<WaterSensor>() {
-                    @Override
-                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
-                        return "sensor_1".equals(value.getId());
-                    }
-                })
-                //默认是松散连续
-//                .times(2)
-                .timesOrMore(2)
-                //严格连续
-                .consecutive()
-                .within(Time.seconds(3))
-                //非确定的松散连续
-//                .allowCombinations()
+        Pattern<WaterSensor, WaterSensor> pattern =
+                //模式组
+                Pattern.begin(
+                        Pattern
+                                .<WaterSensor>begin("start")
+                                .where(new IterativeCondition<WaterSensor>() {
+                                    @Override
+                                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
+                                        return "sensor_1".equals(value.getId());
+                                    }
+                                })
+                                .next("end")
+                                .where(new IterativeCondition<WaterSensor>() {
+                                    @Override
+                                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
+                                        return "sensor_2".equals(value.getId());
+                                    }
+                                })
+                )
+                .times(2)
                 ;
 
         //TODO 2.将模式作用于流上

@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-public class Flink06_CEP_Loop_Add {
+public class Flink10_CEP_Within {
     public static void main(String[] args) throws Exception {
         //1.获取流的执行环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -25,7 +25,7 @@ public class Flink06_CEP_Loop_Add {
         env.setParallelism(1);
 
         //2.从文件读取数据，并将数据转为JavaBean
-        SingleOutputStreamOperator<WaterSensor> waterSensorDStream = env.readTextFile("input/sensor.txt")
+        SingleOutputStreamOperator<WaterSensor> waterSensorDStream = env.readTextFile("input/sensor3.txt")
                 .map(new MapFunction<String, WaterSensor>() {
                     @Override
                     public WaterSensor map(String value) throws Exception {
@@ -45,22 +45,25 @@ public class Flink06_CEP_Loop_Add {
                 );
 
         //TODO 1.定义模式
-        Pattern<WaterSensor, WaterSensor> pattern = Pattern
-                .<WaterSensor>begin("start")
-                .where(new IterativeCondition<WaterSensor>() {
-                    @Override
-                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
-                        return "sensor_1".equals(value.getId());
-                    }
-                })
-                //默认是松散连续
-//                .times(2)
-                .timesOrMore(2)
-                //严格连续
-                .consecutive()
+        Pattern<WaterSensor, WaterSensor> pattern =
+                        Pattern
+                                .<WaterSensor>begin("start")
+                                .where(new IterativeCondition<WaterSensor>() {
+                                    @Override
+                                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
+                                        return "sensor_1".equals(value.getId());
+                                    }
+                                })
+                                .next("end")
+                                .where(new IterativeCondition<WaterSensor>() {
+                                    @Override
+                                    public boolean filter(WaterSensor value, Context<WaterSensor> ctx) throws Exception {
+                                        return "sensor_2".equals(value.getId());
+                                    }
+                                })
+                                //窗口时间为3，当两条匹配到的数据之间间隔超过3S（包含3S）则匹配不到
+                                //如果用到循环模式，则是否超时比的是当前模式第一个进来的事件
                 .within(Time.seconds(3))
-                //非确定的松散连续
-//                .allowCombinations()
                 ;
 
         //TODO 2.将模式作用于流上
