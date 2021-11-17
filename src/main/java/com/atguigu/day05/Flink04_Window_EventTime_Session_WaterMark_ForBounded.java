@@ -53,7 +53,7 @@ public class Flink04_Window_EventTime_Session_WaterMark_ForBounded {
         KeyedStream<WaterSensor, String> keyedStream = waterSensorSingleOutputStreamOperator.keyBy(r -> r.getId());
 
         //TODO 开启一个基于事件时间的会话窗口
-        WindowedStream<WaterSensor, String, TimeWindow> window = keyedStream.window(EventTimeSessionWindows.withGap(Time.seconds(2)));
+        WindowedStream<WaterSensor, String, TimeWindow> window = keyedStream.window(EventTimeSessionWindows.withGap(Time.seconds(3)));
 
         window.process(new ProcessWindowFunction<WaterSensor, String, String, TimeWindow>() {
             @Override
